@@ -8,6 +8,7 @@ import ProductDetail from "../ProductDetail/ProductDetail";
 import NotFound from "../NotFound/NotFound";
 import { removeFromCart, addToCart, getQuantityOfItemInCart, getTotalItemsInCart } from "../../utils/cart";
 import "./App.css";
+const DEV_BASE_URL = "http://localhost:3000";
 
 function App() {
 
@@ -15,13 +16,28 @@ function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeCategory, setActiveCategory] = useState("All Categories");
   const [searchInputValue, setSearchInputValue] = useState("");
-  const [userInfo, setUserInfo] = useState({ name: "", dorm_number: ""});
+  const [userInfo, setUserInfo] = useState({ id: "", email: ""});
   const [products, setProducts] = useState([]);
   const [cart, setCart] = useState({});
   const [isFetching, setIsFetching] = useState(false);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [error, setError] = useState(null);
   const [order, setOrder] = useState(null);
+
+  useEffect (() => {
+    const fetchProducts = async () => {
+    const url = `${DEV_BASE_URL}/products`;
+    try {
+      const response = await axios.get(url);
+      console.log(response);
+      setProducts(response.data);
+    }
+    catch (error) {
+      console.error("Error fetching products", error);
+    }
+    }
+    fetchProducts();
+  }, [])
 
   // Toggles sidebar
   const toggleSidebar = () => setSidebarOpen((isOpen) => !isOpen);
@@ -37,6 +53,35 @@ function App() {
   };
 
   const handleOnCheckout = async () => {
+    setIsCheckingOut(true);
+    const url = `${DEV_BASE_URL}/orders`;
+    const newOrder = {
+      customer_id: userInfo.id,
+      status: "pending",
+    }
+    const response = await axios.post(url, newOrder);
+    const data = (response.data);
+    console.log(data);
+    setOrder(data);
+
+    for(const [key, value] of Object.entries(cart)) {
+      const url1 = `${url}/${data.order_id}/items`;
+      const newItem = {
+        order_id: data.order_id,
+        product_id: key,
+        quantity: value,
+      }
+      const response1 = await axios.post(url1, newItem);
+    }
+    const url2 = `${url}/${data.order_id}`;
+    const updateItem = {
+      status: "completed"
+    }
+    const response2 = await axios.put(url2, updateItem);
+    const data2 = response2.data;
+    setOrder(data2);
+    setCart({});
+    setIsCheckingOut(false);
   }
 
 
